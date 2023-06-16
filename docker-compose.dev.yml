@@ -1,0 +1,26 @@
+version: "3.7"
+
+x-dev-environment:
+  &dev-environment
+  SECRET_KEY: "ee394b51dc9af00ff1284bd7834dbaab144fbda4905ffedb4377ce3a35abe64f" # random default for local dev
+
+services:
+  postgres:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
+  web:
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *dev-environment
+      PORT: 8000
+      ENABLE_USER_REGISTRATION: TRUE
+    restart: unless-stopped
+  worker:
+    environment: *dev-environment
+    restart: unless-stopped
+  migrate:
+    environment:
+      <<: *dev-environment
+      CELERY_WORKER_CONCURRENCY: 2

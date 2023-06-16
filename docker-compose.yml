@@ -1,0 +1,52 @@
+version: "3.7"
+
+x-environment:
+  &default-environment
+  # SECRET_KEY: change_me # best to run openssl rand -hex 32
+  # EMAIL_URL: smtp://email:password@smtp_url:port # https://glitchtip.com/documentation/install#configuration
+  # CELERY_WORKER_CONCURRENCY: 2 # Set to 2 to prevent excessive memory usage. Change it or remove to set it to the number of cpu cores.
+  # DEFAULT_FROM_EMAIL: email@glitchtip.com # Change this to your email
+  # GLITCHTIP_DOMAIN: https://app.glitchtip.com # Change this to your domain
+  DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+
+x-glitchtip:
+  &glitchtip
+  image: glitchtip/glitchtip:v3.2.0
+  depends_on:
+    - postgres
+    - redis
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+    restart: unless-stopped
+    volumes:
+      - ./data/postgres/data/:/var/lib/postgresql/data
+  redis:
+    image: redis
+    restart: unless-stopped
+  ## Each of those below base themselves off the same image
+  web:
+    <<: *glitchtip
+    environment:
+      <<: *default-environment
+      ENABLE_USER_REGISTRATION: FALSE
+      GLITCHTIP_DOMAIN: "https://changeme.redpencil.io/"
+    restart: unless-stopped
+    volumes: 
+      - ./data/uploads/:/code/uploads
+  worker:
+    <<: *glitchtip
+    command: ./bin/run-celery-with-beat.sh
+    environment:
+      <<: *default-environment
+    restart: unless-stopped
+    volumes: 
+      - ./data/uploads/:/code/uploads
+  migrate:
+    <<: *glitchtip
+    command: "./manage.py migrate"
+    environment:
+      <<: *default-environment
